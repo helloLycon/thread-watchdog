@@ -6,6 +6,7 @@
 SI/
 si/
 *.si4project
+dog-log
 
 # Prerequisites
 *.d
