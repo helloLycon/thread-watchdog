@@ -1,4 +1,4 @@
-/*
+/**
  * @brief    A stupid watchdog for your working threads
  *
  * @author   lycon
