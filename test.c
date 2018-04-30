@@ -48,7 +48,7 @@ int main(int argc, const char**argv){
     sem_init(&sem1,0,0);
     sem_init(&sem2,0,0);
     
-    if(EXIT_SUCCESS != watchdog_initialize("/work/picocom/dog/dog-log")){
+    if(EXIT_SUCCESS != watchdog_initialize("./dog-log")){
         return 1;
     }
 
