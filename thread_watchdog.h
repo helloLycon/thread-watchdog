@@ -46,10 +46,22 @@ typedef struct {
 } WatchdogList;
 
 
-
+/* call it first of all */
 int watchdog_initialize(const char * log_file);
+
+
+/** 
+ * @brief   call it in your work-thread to create a new dog 
+ * @param   name: name of thread
+ *          timeout: timeout of watchdog
+ */
 Watchdog * new_watchdog(const char * name, int timeout);
+
+
+/* feed your dog periodically */
 int watchdog_feed(void);
+
+/* dump your dog for debug */
 void watchdog_dump(void);
 
 

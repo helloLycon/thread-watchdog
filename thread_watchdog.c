@@ -106,6 +106,10 @@ static void * watchdog_watch_routine(void * arg){
     return NULL;
 }
 
+/**
+ * @brief  call this first of all to initialize 
+ *         watchdog thread and somewhat else
+ */         
 int watchdog_initialize(const char * log_file){
     static pthread_t tid = 0;
     pthread_attr_t attr;
