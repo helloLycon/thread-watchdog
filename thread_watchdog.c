@@ -9,6 +9,9 @@
 
 #include "thread_watchdog.h"
 
+/* a simple prompt */
+#define WATCHDOG_NOT_FOUND_PROMPT  "this thread is no dog attached..."
+
 
 static WatchdogList watchdog_list;
 
@@ -30,36 +33,25 @@ push_end:
 }
 
 static void watchdog_list_pop(WatchdogList *list, Watchdog *dog){
-    Watchdog *it;
-
-    pthread_mutex_lock(&list->mtx);
-    for(it = list->head;it;it = it->next){
-        if( it == dog ){
-            if( dog == list->head && dog == list->tail ){
-                /* pop the unique node */
-                list->head = list->tail = NULL;
-                goto pop_end;
-            }
-            if( dog == list->tail ){
-                /* pop tail node */
-                it->prev->next = it->next;
-                list->tail = it->prev;
-                goto pop_end;
-            }
-            if(dog == list->head){
-                /* pop head node */
-                it->next->prev = it->prev;
-                list->head = it->next;
-                goto pop_end;
-            }
-            it->prev->next = it->next;
-            it->next->prev = it->prev;
-            goto pop_end;
-        }
+    if( dog == list->head && dog == list->tail ){
+        /* pop the unique node */
+        list->head = list->tail = NULL;
+        return;
     }
-    /* not found */
-pop_end:
-    pthread_mutex_unlock(&list->mtx);
+    if( dog == list->tail ){
+        /* pop tail node */
+        dog->prev->next = dog->next;
+        list->tail = dog->prev;
+        return;
+    }
+    if(dog == list->head){
+        /* pop head node */
+        dog->next->prev = dog->prev;
+        list->head = dog->next;
+        return;
+    }
+    dog->prev->next = dog->next;
+    dog->next->prev = dog->prev;
 }
 
 static void watchdog_someone_oops(Watchdog *dog){
@@ -134,6 +126,22 @@ int watchdog_initialize(const char * log_file){
 }
 
 /**
+ * @ATTENTION  mutex is not locked here,
+ *             lock the mutex before calling plz.
+ */
+static Watchdog * watchdog_find_dog(void){
+    pthread_t tid = pthread_self();
+    Watchdog * it;
+
+    for(it = watchdog_list.head ; it ; it = it->next){
+        if( it->id == tid ){
+            return it;
+        }
+    }
+    return NULL;
+}
+
+/**
  * @brief  create a watchdog for one thread
  * @param  name:    name of the thread
  *         timeout: watchdog timeout(unit: second)
@@ -157,27 +165,20 @@ Watchdog * new_watchdog(const char *name, int timeout){
 }
 
 /**
- * @brief  do NOT use it for the moment
+ * @brief  delete the watchdog attached to the thread
  */
-void delete_watchdog(Watchdog *dog){
-    watchdog_list_pop(&watchdog_list, dog);
-    free(dog);
-}
-
-/**
- * @ATTENTION  mutex is not locked here,
- *             lock the mutex before calling plz.
- */
-static Watchdog * watchdog_find_dog(void){
-    pthread_t tid = pthread_self();
-    Watchdog * it;
-
-    for(it = watchdog_list.head ; it ; it = it->next){
-        if( it->id == tid ){
-            return it;
-        }
+void delete_watchdog(void){
+    Watchdog * dog;
+    
+    pthread_mutex_lock(&watchdog_list.mtx);
+    dog = watchdog_find_dog();
+    if(dog) {
+        watchdog_list_pop(&watchdog_list, dog);
+        free(dog);
+    } else {
+        fprintf(stderr, "delete_watchdog: "WATCHDOG_NOT_FOUND_PROMPT"\r\n");
     }
-    return NULL;
+    pthread_mutex_unlock(&watchdog_list.mtx);
 }
 
 
@@ -193,6 +194,8 @@ int watchdog_feed(void){
         it->countdown = it->timeout;
         pthread_mutex_unlock(&watchdog_list.mtx);
         return EXIT_SUCCESS;
+    } else {
+        fprintf(stderr, "watchdog_feed: "WATCHDOG_NOT_FOUND_PROMPT"\r\n");
     }
     
     /* the dog not found */
@@ -219,8 +222,8 @@ void watchdog_dump(void){
                it->id,
                it->timeout,
                it->countdown);
-    }else{
-        printf("this thread is no dog attached...\r\n");
+    } else {
+        fprintf(stderr, "watchdog_dump: "WATCHDOG_NOT_FOUND_PROMPT"\r\n");
     }
     pthread_mutex_unlock(&watchdog_list.mtx);
 }
