@@ -26,6 +26,8 @@
 #define EXIT_FAILURE  1
 #endif
 
+
+
 typedef struct Watchdog{
     const char * name;
     pthread_t    id;
@@ -46,9 +48,14 @@ typedef struct {
 } WatchdogList;
 
 
+
+
+
+
+
+
 /* call it first of all */
 int watchdog_initialize(const char * log_file);
-
 
 /** 
  * @brief   call it in your work-thread to create a new dog 
@@ -57,6 +64,10 @@ int watchdog_initialize(const char * log_file);
  */
 Watchdog * new_watchdog(const char * name, int timeout);
 
+/**
+ * @brief   delete the watchdog attached to the thread
+ */
+void delete_watchdog(void);
 
 /* feed your dog periodically */
 int watchdog_feed(void);

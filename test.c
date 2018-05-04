@@ -3,13 +3,17 @@
 #include "thread_watchdog.h"
 
 sem_t sem0,sem1,sem2;
-
+int del0,del1,del2;
 
 void * test_thread_0(void * arg){
     new_watchdog("thread-0", 10);
     for(;;){
         sem_wait(&sem0);
-        watchdog_feed();
+        if(del0){
+            delete_watchdog();
+        } else {
+            watchdog_feed();
+        }
         watchdog_dump();
     }
     return NULL;
@@ -21,7 +25,11 @@ void * test_thread_1(void * arg){
     new_watchdog("thread-1", 15);
     for(;;){
         sem_wait(&sem1);
-        watchdog_feed();
+        if(del1){
+            delete_watchdog();
+        } else {
+            watchdog_feed();
+        }
         watchdog_dump();
     }
     return NULL;
@@ -32,7 +40,11 @@ void * test_thread_2(void * arg){
     new_watchdog("thread-2", 20);
     for(;;){
         sem_wait(&sem2);
-        watchdog_feed();
+        if(del2){
+            delete_watchdog();
+        } else {
+            watchdog_feed();
+        }
         watchdog_dump();
     }
     return NULL;
@@ -55,18 +67,37 @@ int main(int argc, const char**argv){
     pthread_create(&tid0,NULL,test_thread_0,NULL);
     pthread_create(&tid1,NULL,test_thread_1,NULL);
     pthread_create(&tid2,NULL,test_thread_2,NULL);
-    new_watchdog("main", 10);
     for(;;){
         char line[1024];
         fgets(line, sizeof line, stdin);
-        watchdog_feed();
 
-        if(strstr(line, "0"))
+        if(strstr(line, "d0")){
+            del0 = 1;
             sem_post(&sem0);
-        if(strstr(line, "1"))
+            continue;
+        }
+        if(strstr(line, "d1")){
+            del1 = 1;
             sem_post(&sem1);
-        if(strstr(line, "2"))
+            continue;
+        }
+        if(strstr(line, "d2")){
+            del2 = 1;
             sem_post(&sem2);
+            continue;
+        }
+        if(strstr(line, "0")){
+            del0 = 0;
+            sem_post(&sem0);
+        }
+        if(strstr(line, "1")){
+            del1 = 0;
+            sem_post(&sem1);
+        }
+        if(strstr(line, "2")){
+            del2 = 0;
+            sem_post(&sem2);
+        }
     }
     return 0;
 }

@@ -16,44 +16,6 @@
 static WatchdogList watchdog_list;
 
 
-static void watchdog_list_push(WatchdogList *list, Watchdog *dog){
-    pthread_mutex_lock(&list->mtx);
-    if( !list->head ){
-        list->head = list->tail = dog;
-        dog->prev = dog->next = NULL;
-        goto push_end;
-    }
-    list->tail->next = dog;
-    dog->prev = list->tail;
-    dog->next = NULL;
-    list->tail = dog;
-    
-push_end:
-    pthread_mutex_unlock(&list->mtx);
-}
-
-static void watchdog_list_pop(WatchdogList *list, Watchdog *dog){
-    if( dog == list->head && dog == list->tail ){
-        /* pop the unique node */
-        list->head = list->tail = NULL;
-        return;
-    }
-    if( dog == list->tail ){
-        /* pop tail node */
-        dog->prev->next = dog->next;
-        list->tail = dog->prev;
-        return;
-    }
-    if(dog == list->head){
-        /* pop head node */
-        dog->next->prev = dog->prev;
-        list->head = dog->next;
-        return;
-    }
-    dog->prev->next = dog->next;
-    dog->next->prev = dog->prev;
-}
-
 static void watchdog_someone_oops(Watchdog *dog){
     char log[1024];
     char timestr[1024];
@@ -125,6 +87,40 @@ int watchdog_initialize(const char * log_file){
     return EXIT_SUCCESS;
 }
 
+static void watchdog_list_push(WatchdogList *list, Watchdog *dog){
+    if( !list->head ){
+        list->head = list->tail = dog;
+        dog->prev = dog->next = NULL;
+        return;
+    }
+    list->tail->next = dog;
+    dog->prev = list->tail;
+    dog->next = NULL;
+    list->tail = dog;
+}
+
+static void watchdog_list_pop(WatchdogList *list, Watchdog *dog){
+    if( list->head == list->tail ){
+        /* pop the unique node */
+        list->head = list->tail = NULL;
+        return;
+    }
+    if( dog == list->tail ){
+        /* pop tail node */
+        dog->prev->next = NULL;
+        list->tail = dog->prev;
+        return;
+    }
+    if(dog == list->head){
+        /* pop head node */
+        dog->next->prev = NULL;
+        list->head = dog->next;
+        return;
+    }
+    dog->prev->next = dog->next;
+    dog->next->prev = dog->prev;
+}
+
 /**
  * @ATTENTION  mutex is not locked here,
  *             lock the mutex before calling plz.
@@ -147,20 +143,29 @@ static Watchdog * watchdog_find_dog(void){
  *         timeout: watchdog timeout(unit: second)
  */
 Watchdog * new_watchdog(const char *name, int timeout){
-    Watchdog * dog = malloc(sizeof(Watchdog));
-    
-    if(!dog){
-        fprintf(stderr, "malloc: failed\r\n");
-        exit(EXIT_FAILURE);
-    }
-    dog->name = name;
-    dog->id   = pthread_self();
-    dog->timeout = timeout;
-    dog->countdown = timeout;
+    Watchdog * dog;
 
-    /* add it into the list */
-    watchdog_list_push(&watchdog_list, dog);
-    
+    pthread_mutex_lock(&watchdog_list.mtx);
+    dog = watchdog_find_dog();
+    if(dog){
+        fprintf(stderr, "new_watchdog: can not create more than one dog for a thread!\r\n");
+        dog = NULL;
+    } else {
+        dog = malloc(sizeof(Watchdog));
+        
+        if(!dog){
+            fprintf(stderr, "malloc: failed\r\n");
+            exit(EXIT_FAILURE);
+        }
+        dog->name = name;
+        dog->id   = pthread_self();
+        dog->timeout = timeout;
+        dog->countdown = timeout;
+
+        /* add it into the list */
+        watchdog_list_push(&watchdog_list, dog);
+    }
+    pthread_mutex_unlock(&watchdog_list.mtx);
     return dog;
 }
 
