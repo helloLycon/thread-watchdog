@@ -31,12 +31,13 @@ static void watchdog_someone_oops(Watchdog *dog){
             dog->id);
     /* print on the terminal */
     fputs(log, stderr);
-    
-    /* write into log file */
-    fp = fopen(watchdog_list.log_file, "a");
-    fputs(log, fp);
-    fclose(fp);
 
+    if(watchdog_list.log_file){
+        /* write into log file */
+        fp = fopen(watchdog_list.log_file, "a");
+        fputs(log, fp);
+        fclose(fp);
+    }
     /* exit the process */
     exit(EXIT_FAILURE);
 }
