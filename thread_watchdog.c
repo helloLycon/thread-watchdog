@@ -6,7 +6,7 @@
  * @github   https://github.com/lk361115629
  *
  */
-
+#include <stdarg.h>
 #include "thread_watchdog.h"
 
 /* a simple prompt */
@@ -16,28 +16,32 @@
 static WatchdogList watchdog_list;
 
 
-static void watchdog_someone_oops(Watchdog *dog){
-    char log[1024];
+static void watchdog_log(const char *fmt, ...){
     char timestr[1024];
     time_t now = time(NULL);
     FILE *fp;
-
+    va_list ap;
+    va_start(ap, fmt);
+    
     strftime(timestr, sizeof(timestr), 
-             "%Y-%m-%d %H:%M:%S",
+             "%y-%m-%d,%H:%M:%S",
              localtime(&now));
-    sprintf(log, "[%s]Watchdog: thread<%s> dead(tid = %lu)\r\n",
-            timestr,
-            dog->name,
-            dog->id);
-    /* print on the terminal */
-    fputs(log, stderr);
-
+    /* print on terminal */
+    printf("[%s]Watchdog: ", timestr);
+    vprintf(fmt, ap);
     if(watchdog_list.log_file){
         /* write into log file */
         fp = fopen(watchdog_list.log_file, "a");
-        fputs(log, fp);
+        fprintf(fp, "[%s]Watchdog: ", timestr);
+        vfprintf(fp, fmt, ap);
         fclose(fp);
     }
+    va_end(ap);
+}
+
+
+static void watchdog_someone_oops(Watchdog *dog){
+    watchdog_log("thread <%s> dead(tid = %lu)\r\n", dog->name, dog->id);
     /* exit the process */
     exit(EXIT_FAILURE);
 }
@@ -153,7 +157,6 @@ Watchdog * new_watchdog(const char *name, int timeout){
         dog = NULL;
     } else {
         dog = malloc(sizeof(Watchdog));
-        
         if(!dog){
             fprintf(stderr, "malloc: failed\r\n");
             exit(EXIT_FAILURE);
@@ -162,9 +165,11 @@ Watchdog * new_watchdog(const char *name, int timeout){
         dog->id   = pthread_self();
         dog->timeout = timeout;
         dog->countdown = timeout;
-
         /* add it into the list */
         watchdog_list_push(&watchdog_list, dog);
+
+        /* LOG INTO FILE */
+        watchdog_log("dog for <%s> created\r\n", dog->name);
     }
     pthread_mutex_unlock(&watchdog_list.mtx);
     return dog;
