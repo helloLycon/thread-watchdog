@@ -41,7 +41,7 @@ static void watchdog_log(const char *fmt, ...){
 
 
 static void watchdog_someone_oops(Watchdog *dog){
-    watchdog_log("thread <%s> dead(tid = %lu)\r\n", dog->name, dog->id);
+    watchdog_log("Thread <%s> dead(tid = %lu)\r\n", dog->name, dog->id);
     /* exit the process */
     exit(EXIT_FAILURE);
 }
@@ -169,7 +169,7 @@ Watchdog * new_watchdog(const char *name, int timeout){
         watchdog_list_push(&watchdog_list, dog);
 
         /* LOG INTO FILE */
-        watchdog_log("dog for <%s> created\r\n", dog->name);
+        watchdog_log("Dog for <%s> was created\r\n", dog->name);
     }
     pthread_mutex_unlock(&watchdog_list.mtx);
     return dog;
