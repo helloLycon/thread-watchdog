@@ -55,7 +55,7 @@ typedef struct {
 
 
 /* call it first of all */
-int watchdog_initialize(const char * log_file);
+int watchdog_init(const char * log_file);
 
 /** 
  * @brief   call it in your work-thread to create a new dog 
