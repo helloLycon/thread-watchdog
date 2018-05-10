@@ -7,6 +7,7 @@
  *
  */
 #include <stdarg.h>
+#include <sys/file.h>
 #include "thread_watchdog.h"
 
 /* a simple prompt */
@@ -32,8 +33,13 @@ static void watchdog_log(const char *fmt, ...){
     if(watchdog_list.log_file){
         /* write into log file */
         fp = fopen(watchdog_list.log_file, "a");
+        flock(fileno(fp), LOCK_SH);
+        fseek(fp, 0, SEEK_END);
+        
         fprintf(fp, "[%s]Watchdog: ", timestr);
         vfprintf(fp, fmt, ap);
+        
+        flock(fileno(fp), LOCK_UN);
         fclose(fp);
     }
     va_end(ap);
