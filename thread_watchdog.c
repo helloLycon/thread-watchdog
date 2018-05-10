@@ -33,7 +33,7 @@ static void watchdog_log(const char *fmt, ...){
     if(watchdog_list.log_file){
         /* write into log file */
         fp = fopen(watchdog_list.log_file, "a");
-        flock(fileno(fp), LOCK_SH);
+        flock(fileno(fp), LOCK_EX);
         fseek(fp, 0, SEEK_END);
         
         fprintf(fp, "[%s]Watchdog: ", timestr);
