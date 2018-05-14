@@ -30,6 +30,7 @@ static void watchdog_log(const char *fmt, ...){
     /* print on terminal */
     printf("[%s]Watchdog: ", timestr);
     vprintf(fmt, ap);
+    fflush(stdout);
     if(watchdog_list.log_file){
         /* write into log file */
         fp = fopen(watchdog_list.log_file, "a");
